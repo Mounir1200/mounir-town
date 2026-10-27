@@ -196,7 +196,8 @@ function resize() {
 let elapsed = 0;
 let previousFrame = performance.now();
 function frame(now) {
-  const deltaSeconds = Math.min((now - previousFrame) / 1000, MAX_FRAME_SECONDS);
+  // The first animation timestamp can precede the performance.now() taken at start-up.
+  const deltaSeconds = Math.min(Math.max(0, now - previousFrame) / 1000, MAX_FRAME_SECONDS);
   previousFrame = now;
   elapsed += deltaSeconds;
   game.update(deltaSeconds);
