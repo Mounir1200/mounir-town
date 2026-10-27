@@ -13,6 +13,10 @@ LICENSES = (
     "assets/fonts/SpaceGrotesk-OFL.txt",
     "assets/fonts/SOURCES.txt",
 )
+# Relative ES module specifiers (`import ... from './x.js'`, `export ... from`, `import './x.js'`).
+MODULE_IMPORT = re.compile(r"""(?:\bfrom\s*|\bimport\s*)['"](\.{1,2}/[^'"]+)['"]""")
+# Asset paths written in JavaScript content are relative to the page, not to the module.
+ASSET_LITERAL = re.compile(r"""['"](assets/[^'"\s]+)['"]""")
 
 
 class SiteReferences(HTMLParser):
@@ -46,7 +50,7 @@ def local_asset(reference, parent=ROOT):
     if url.scheme or url.netloc or not url.path:
         return None
     if url.path.startswith("/"):
-        raise ValueError(f"Root-relative URL would escape /Mounir/: {reference}")
+        raise ValueError(f"Root-relative URL would escape the Pages subpath: {reference}")
     path = (parent / unquote(url.path)).resolve()
     if not path.is_relative_to(ROOT) or path.is_relative_to(OUTPUT):
         raise ValueError(f"Asset outside the source tree: {reference}")
@@ -75,6 +79,11 @@ def main():
                 linked = local_asset(url, asset.parent)
                 if linked:
                     pending.append(linked.relative_to(ROOT).as_posix())
+        elif asset.suffix == ".js":
+            source = asset.read_text(encoding="utf-8")
+            for specifier in MODULE_IMPORT.findall(source):
+                pending.append(local_asset(specifier, asset.parent).relative_to(ROOT).as_posix())
+            pending.extend(ASSET_LITERAL.findall(source))
 
     # This directory is generated only by this script, never a source directory.
     if OUTPUT.is_symlink() or OUTPUT.resolve() != ROOT / "_site":

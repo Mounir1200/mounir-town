@@ -18,18 +18,14 @@ jobs:
     steps:
       - name: Check out portfolio
         uses: actions/checkout@v6
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
       - name: Check JavaScript syntax
-        run: |
-          node --check app.js
-          node --check cursor.js
-          node --check photography.js
-          node --check music.js
-          node --check navigation.js
-          node --check translations.js
-          node --check dynamic-translations.js
-          node --check i18n.js
-      - name: Check language selection and CV routing
-        run: node scripts/check_i18n.cjs
+        run: find src scripts -name '*.js' -print0 | xargs -0 -n1 node --check
+      - name: Check languages, content and town layout
+        run: node scripts/check_game.js
       - name: Package linked website files
         run: python3 scripts/build_site.py
       - name: Upload website artifact
